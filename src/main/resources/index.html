@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat</title>
+    <style>
+        .message-container {
+            display: flex;
+            margin: 10px;
+    }
+
+    .message-self {
+        justify-content: flex-end;
+        color: blue;
+    }
+
+    .message-other {
+        justify-content: flex-start;
+        color: green;
+    }
+
+    .message {
+        padding: 10px;
+        border-radius: 10px;
+        background-color: #f1f1f1;
+        max-width: 60%;
+    }
+
+    </style>
+</head>
+<body>
+<h1>Chat Room</h1>
+<input type="text" id="message" placeholder="Enter your message">
+<button onclick="sendMessage()">Send</button>
+<div id="chat"></div>
+
+<script>
+    const roomId = prompt("Enter room ID");
+    const sender = prompt("Enter your name");
+    const socket = new WebSocket('ws://localhost:8080/chat?roomId=' + roomId);
+
+    socket.onmessage = function (event) {
+    // 서버에서 받은 메시지를 JSON으로 파싱
+    const messageData = JSON.parse(event.data);
+
+    const chat = document.getElementById('chat');
+    const messageContainer = document.createElement('div');
+    messageContainer.classList.add('message-container');
+
+    const messageText = document.createElement('div');
+    messageText.classList.add('message');
+
+    // sender(username), message, timestamp를 사용하여 메시지 구성
+    const formattedMessage = messageData.sender + ": " + messageData.message + " (" + new Date(messageData.timestamp).toLocaleTimeString() + ")";
+
+    messageText.textContent = formattedMessage;
+
+    // 자신이 보낸 메시지인지 확인하여 위치 결정
+    if (messageData.sender === sender) {
+        messageContainer.classList.add('message-self'); // 내가 보낸 메시지면 오른쪽 정렬
+    } else {
+        messageContainer.classList.add('message-other'); // 다른 사람이 보낸 메시지면 왼쪽 정렬
+    }
+
+    messageContainer.appendChild(messageText);
+    chat.appendChild(messageContainer);
+
+    // 스크롤을 맨 아래로 내림
+    chat.scrollTop = chat.scrollHeight;
+    };
+
+
+
+function sendMessage() {
+    const input = document.getElementById('message');
+    const messagePayload = {
+        message: input.value,
+        sender: sender
+    };
+
+    // 메시지를 서버에 전송
+    socket.send(JSON.stringify(messagePayload));
+
+    // 메시지를 내 화면에 즉시 추가
+    appendMessage(messagePayload); // 메시지 전송 후 내 화면에 표시
+    input.value = ''; // 입력 필드 초기화
+}
+
+// 메시지를 화면에 추가하는 함수
+function appendMessage(messageData) {
+    const chat = document.getElementById('chat');
+    const messageContainer = document.createElement('div');
+    messageContainer.classList.add('message-container');
+
+    const messageText = document.createElement('div');
+    messageText.classList.add('message');
+    messageText.textContent = messageData.sender + ": " + messageData.message;
+
+    // 내가 보낸 메시지와 다른 사용자가 보낸 메시지를 구분
+    if (messageData.sender === sender) {
+        messageContainer.classList.add('message-self');
+    } else {
+        messageContainer.classList.add('message-other');
+    }
+
+    messageContainer.appendChild(messageText);
+    chat.appendChild(messageContainer);
+
+    // 스크롤을 맨 아래로 내림
+    chat.scrollTop = chat.scrollHeight;
+}
+
+</script>
+</body>
+</html>
